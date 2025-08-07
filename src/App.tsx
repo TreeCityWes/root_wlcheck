@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import localSnapshot from '../master-project-list.json';
+import fcfsPhase from '../fcfs-phase2.json';
+import rootPhase from '../root-phase1.json';
 
 type WhitelistDb = Record<string, { totalProjects: number; projects: string[] }>; 
 
@@ -47,11 +48,13 @@ const useLookup = (db: WhitelistDb, wallet: string) => {
 const AnimatedDivider: React.FC = () => <div className="divider" aria-hidden="true" />;
 
 const App: React.FC = () => {
-  const [db, setDb] = useState<WhitelistDb>(localSnapshot as WhitelistDb);
+  const [phase1Db, setPhase1Db] = useState<WhitelistDb>(rootPhase as WhitelistDb);
+  const [phase2Db, setPhase2Db] = useState<WhitelistDb>(fcfsPhase as WhitelistDb);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [wallet, setWallet] = useState<string>('');
   const [query, setQuery] = useState<string>('');
-  const result = useLookup(db, query);
+  const p1 = useLookup(phase1Db, query);
+  const p2 = useLookup(phase2Db, query);
   const [tab, setTab] = useState<'lookup' | 'about'>('lookup');
 
   useEffect(() => {
@@ -59,11 +62,15 @@ const App: React.FC = () => {
       try {
         setIsLoading(true);
         const base = import.meta.env.BASE_URL || '/';
-        const res = await fetch(`${base}master-project-list.json`, { cache: 'no-cache' });
-        const json = (await res.json()) as WhitelistDb;
-        setDb(json);
+        const [r1, r2] = await Promise.all([
+          fetch(`${base}root-phase1.json`, { cache: 'no-cache' }),
+          fetch(`${base}fcfs-phase2.json`, { cache: 'no-cache' })
+        ]);
+        const [j1, j2] = await Promise.all([r1.json(), r2.json()]);
+        setPhase1Db(j1 as WhitelistDb);
+        setPhase2Db(j2 as WhitelistDb);
       } catch (err) {
-        console.error('Failed to load master-project-list.json', err);
+        console.error('Failed to load phase json files', err);
       } finally {
         setIsLoading(false);
       }
@@ -104,7 +111,9 @@ const App: React.FC = () => {
           {tab === 'lookup' && (
           <>
           <div className="inputRow">
+            <label className="inputLabel" htmlFor="wallet">Wallet address</label>
             <input
+              id="wallet"
               type="text"
               inputMode="text"
               placeholder="Enter Solana wallet address"
@@ -114,51 +123,65 @@ const App: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWallet(e.target.value)}
               onKeyDown={onKeyDown}
             />
-            <button className="btn" onClick={onSearch}>Search</button>
+            <button className="btn" onClick={onSearch} aria-label="Search address">Search</button>
           </div>
           <AnimatedDivider />
           <div className="results">
-            {isLoading && <div className="muted">Loading snapshot…</div>}
-            {!isLoading && !result && <div className="muted">Awaiting input…</div>}
-            {result && result.total === 0 && (
-              <div className="danger">No whitelist entries found for {result.address}</div>
+            {isLoading && <div className="muted">Loading snapshots…</div>}
+            {!isLoading && !p1 && <div className="muted">Awaiting input…</div>}
+            {p1 && (
+              <div style={{ marginBottom: 18 }}>
+                <div className="statusLine">
+                  <span className="label">Address</span>
+                  <span className="projName">{p1.address}</span>
+                </div>
+
+                {/* Phase 1 first */}
+                <div className="phase">
+                  <div className="phaseHeader">
+                    <img className="projIcon" src="/root.png" alt="ROOT Phase 1" />
+                    <div>
+                      <div className="sectionTitle">ROOT Phase 1</div>
+                      <div className="muted">Top 265 ROOT holders • Snapshot 8/6 10PM ET</div>
+                    </div>
+                    <span className={`pill ${p1.total > 0 ? 'success' : 'danger'}`}>
+                      {p1.total > 0 ? 'Eligible: 2 mints' : 'Not eligible'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Phase 2 second */}
+                <div className="phase">
+                  <div className="phaseHeader">
+                    <img className="projIcon" src="/dgn.png" alt="FCFS Phase 2" onError={(e)=>{(e.currentTarget as HTMLImageElement).src='/root.png';}}/>
+                    <div>
+                      <div className="sectionTitle">FCFS Phase 2</div>
+                      <div className="muted">Partner communities • Snapshot 8/6 10PM ET</div>
+                    </div>
+                    <span className={`pill ${p2 && p2.total > 0 ? 'success' : 'danger'}`}>
+                      {p2 && p2.total > 0 ? `Eligible: ${p2.total} mints` : 'Not eligible'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
-            {result && result.total > 0 && (
-              <div>
-                <div style={{ marginBottom: 10 }}>
-                  <strong style={{ color: 'var(--primary)' }}>Address:</strong> {result.address}
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <strong style={{ color: 'var(--primary)' }}>Total WL:</strong> {result.total}
-                </div>
-                <div className="grid">
-                  {result.projects.map((p) => {
+
+            {p2 && p2.total > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="sectionTitle" style={{ marginBottom: 6 }}>Phase 2 — Eligible projects</div>
+                <div className="projectRows">
+                  {p2.projects.map((p) => {
                     const icon = projectIconPath(p);
                     return (
-                      <div key={p} className="card">
-                        <div className="projHeader">
-                          {icon && (
-                            <img
-                              className="projIcon"
-                              src={icon}
-                              alt={formatProjectName(p)}
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/root.png'; }}
-                            />
+                      <div className="projectRow" key={p}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {icon && <img className="projIcon" src={icon} alt={formatProjectName(p)} onError={(e)=>{(e.currentTarget as HTMLImageElement).src='/root.png';}}/>}
+                          <span className="projName">{formatProjectName(p)}</span>
+                        </div>
+                        <div className="linksRow">
+                          {(projectLinks[p]?.site || projectLinks[p]?.x) && (
+                            <a className="btn small secondary" href={projectLinks[p]?.site ?? projectLinks[p]?.x} target="_blank" rel="noreferrer">Website ↗</a>
                           )}
-                          <div>
-                            <div><strong>Project</strong>: {formatProjectName(p)}</div>
-                            <div className="muted">One WL</div>
-                            {(projectLinks[p]?.site || projectLinks[p]?.x) && (
-                              <div className="linksRow">
-                                {projectLinks[p]?.site && (
-                                  <a href={projectLinks[p].site} target="_blank" rel="noreferrer">Website</a>
-                                )}
-                                {projectLinks[p]?.x && (
-                                  <a href={projectLinks[p].x} target="_blank" rel="noreferrer">X</a>
-                                )}
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                     );

@@ -16,7 +16,8 @@
   },
   "include": [
     "src",
-    "master-project-list.json"
+    "fcfs-phase2.json",
+    "root-phase1.json"
   ]
 }
 
