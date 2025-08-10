@@ -20,6 +20,7 @@ const projectIconPath = (key: string): string | null => {
     token_xencat: '/xencat.png',
     token_solxen: '/solxen.png',
     token_drac: '/drac.png',
+    token_xend: '/xend.png',
     root: '/root.png'
   };
   return map[key] ?? null;
@@ -32,6 +33,7 @@ const projectLinks: Record<string, { site?: string; x?: string }> = {
   nft_kjp: { site: 'https://noface.buzz', x: 'https://x.com/i/communities/1952895193478463919' },
   token_xencat: { site: 'https://xencat.tech', x: 'https://x.com/solxencat' },
   token_drac: { site: 'https://emojidracula.win', x: 'https://x.com/EmojiDracula' },
+  token_xend: { x: 'https://x.com/XEND_IT' },
   root: { site: 'https://treeroot.city', x: 'https://x.com/treerootdev' }
 };
 
